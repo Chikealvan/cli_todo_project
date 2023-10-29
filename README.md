@@ -20,4 +20,3 @@ Here's a formatted version of the commands and their descriptions:
 | `done` |	Deletes a task. Prompts the user for the task id.
 | `tasks` |	Displays all inputted tasks.
 
-# cli_todo_project

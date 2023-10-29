@@ -1,44 +1,8 @@
 import click
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker
+from models.database import Base, engine
+from models.task_model import Category, Task, Label  # Import the models
 
-# Create a SQLite database and establish a connection
-engine = create_engine('sqlite:///todo.db')
-Base = declarative_base()
-
-class Task(Base):
-    __tablename__ = 'tasks'
-
-    id = Column(Integer, primary_key=True)
-    task = Column(String)
-    category_id = Column(Integer, ForeignKey('categories.id'))
-    labels = relationship('Label', secondary='task_labels')
-
-class Category(Base):
-    __tablename__ = 'categories'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    tasks = relationship('Task', back_populates='category')
-
-class Label(Base):
-    __tablename__ = 'labels'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    tasks = relationship('Task', secondary='task_labels')
-
-class TaskLabel(Base):
-    __tablename__ = 'task_labels'
-
-    task_id = Column(Integer, ForeignKey('tasks.id'), primary_key=True)
-    label_id = Column(Integer, ForeignKey('labels.id'), primary_key=True)
-
-# Create tables in the database
-Base.metadata.create_all(engine)
-
-# Create a session to interact with the database
 Session = sessionmaker(bind=engine)
 
 @click.group()
@@ -47,6 +11,13 @@ def todo(ctx):
     """CLI Todo Project"""
     ctx.ensure_object(dict)
     ctx.obj["session"] = Session()
+
+    # import pdb; pdb.set_trace()  # Add this line for debugging
+
+@todo.command()
+def dbinit():
+    """Initialize the database."""
+    Base.metadata.create_all(engine)
 
 @todo.command()
 @click.pass_context
@@ -72,12 +43,10 @@ def add(ctx, add_task, category_name, label_names):
     """Add a task"""
     session = ctx.obj["session"]
 
-    # Check if the category already exists or create a new one
     category = session.query(Category).filter(Category.name == category_name).first()
     if not category:
         category = Category(name=category_name)
 
-    # Split label_names and check if labels exist, creating new ones if needed
     label_names = [label.strip() for label in label_names.split(',')]
     labels = []
     for label_name in label_names:
@@ -106,6 +75,3 @@ def done(ctx, fin_taskid):
         click.echo(f"Finished and removed task '{task_text}' with id {fin_taskid}")
     else:
         click.echo(f"Error: no task with id {fin_taskid}")
-
-if __name__ == "__main__":
-    todo()
